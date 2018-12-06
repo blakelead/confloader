@@ -20,11 +20,13 @@ Here are the configuration file that will be used for our example. You can write
     "paramInt": 42,
     "paramFloat": 42.1,
     "paramBool": true,
+    "paramDuration": "20s",
     "paramObj": {
         "paramStringArray": ["foo", "bar", "baz"],
         "paramIntArray": [42, 43, 44],
         "paramFloatArray": [42.2, 43.4, 44.6],
-        "paramBoolArray": [true, false, true]
+        "paramBoolArray": [true, false, true],
+        "paramDurationArray": ["42ns", "5m", "10h10m"]
     },
     "paramEnv": "${ENV_FOO}"
 }
@@ -35,6 +37,7 @@ paramString: foo
 paramInt: 42
 paramFloat: 42.1
 paramBool: true
+paramDuration: 20s
 paramObj:
   paramStringArray: ["foo", "bar", "baz"]
   paramIntArray: [42, 43, 44]
@@ -43,6 +46,7 @@ paramObj:
    - true
    - false
    - true
+  paramDurationArray: [42ns, 5m, 10h10m]
 paramEnv: ${ENV_FOO}
 ```
 
@@ -70,6 +74,9 @@ func main() {
     pi := config.GetInt("paramInt")
     fmt.Println(pi) // 42
 
+    pd := config.GetDuration("paramDuration")
+    fmt.Println(pd) // 20s
+
     pf := config.GetFloat("paramFloat")
     fmt.Println(pf) // 42.1
 
@@ -81,6 +88,9 @@ func main() {
 
     pia := config.GetIntArray("paramObj.paramIntArray")
     fmt.Println(pia) // [42 43 44]
+
+    pda := config.GetDurationArray("paramObj.paramDurationArray")
+    fmt.Println(pda) // [42ns 5m 10h10m0s]
 
     pfa := config.GetFloatArray("paramObj.paramFloatArray")
     fmt.Println(pfa) // [42.2 43.4 44.6]
@@ -107,10 +117,14 @@ func main() {
     pfs := config.GetString("paramObj.paramFloatArray.1")
     fmt.Println(pfs) // 43.4
 
+    // []string -> string
+    pss := config.GetString("paramObj.paramStringArray")
+    fmt.Println(pss) // foo,bar,baz
+
     // Finally, environment variables can be used inside configuration file,
     // but only for string values
 
-    // ${ENV_FOO}=fooz
+    // export ENV_FOO=fooz
     pe := config.GetString("paramEnv")
     fmt.Println(pe) // fooz
 }
