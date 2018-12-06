@@ -9,6 +9,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestLoad(t *testing.T) {
@@ -53,33 +54,35 @@ func TestLoad(t *testing.T) {
 		}, {
 			name:    "Load Simple JSON File",
 			args:    args{filename: "simple-conf.json"},
-			want:    Config{"paramString": "foo", "paramInt": 42.0, "paramFloat": 42.1, "paramBool": true},
+			want:    Config{"paramString": "foo", "paramInt": 42.0, "paramFloat": 42.1, "paramBool": true, "paramDuration": "10h10m"},
 			wantErr: false,
 		}, {
 			name:    "Load Simple YAML File",
 			args:    args{filename: "simple-conf.yaml"},
-			want:    Config{"paramString": "foo", "paramInt": 42.0, "paramFloat": 42.1, "paramBool": true},
+			want:    Config{"paramString": "foo", "paramInt": 42.0, "paramFloat": 42.1, "paramBool": true, "paramDuration": "10h10m"},
 			wantErr: false,
 		}, {
 			name: "Load Complex JSON File",
 			args: args{filename: "complex-conf.json"},
 			want: Config{
-				"paramString": "foo", "paramInt": 42.0, "paramFloat": 42.1, "paramBool": true,
+				"paramString": "foo", "paramInt": 42.0, "paramFloat": 42.1, "paramBool": true, "paramDuration": "10h10m",
 				"paramObj.paramIntArray": []float64{0.0, 1.0, 2.0}, "paramObj.paramIntArray.0": 0.0, "paramObj.paramIntArray.1": 1.0, "paramObj.paramIntArray.2": 2.0,
 				"paramObj.paramFloatArray": []float64{0.1, 1.1, 2.1}, "paramObj.paramFloatArray.0": 0.1, "paramObj.paramFloatArray.1": 1.1, "paramObj.paramFloatArray.2": 2.1,
 				"paramObj.paramStringArray": []string{"foo", "bar", "baz"}, "paramObj.paramStringArray.0": "foo", "paramObj.paramStringArray.1": "bar", "paramObj.paramStringArray.2": "baz",
 				"paramObj.paramBoolArray": []bool{true, false, true}, "paramObj.paramBoolArray.0": true, "paramObj.paramBoolArray.1": false, "paramObj.paramBoolArray.2": true,
+				"paramObj.paramDurationArray": []string{"10h10m", "10h20m", "10h30m"}, "paramObj.paramDurationArray.0": "10h10m", "paramObj.paramDurationArray.1": "10h20m", "paramObj.paramDurationArray.2": "10h30m",
 			},
 			wantErr: false,
 		}, {
 			name: "Load Complex YAML File",
 			args: args{filename: "complex-conf.yaml"},
 			want: Config{
-				"paramString": "foo", "paramInt": 42.0, "paramFloat": 42.1, "paramBool": true,
+				"paramString": "foo", "paramInt": 42.0, "paramFloat": 42.1, "paramBool": true, "paramDuration": "10h10m",
 				"paramObj.paramIntArray": []float64{0, 1, 2}, "paramObj.paramIntArray.0": 0.0, "paramObj.paramIntArray.1": 1.0, "paramObj.paramIntArray.2": 2.0,
 				"paramObj.paramFloatArray": []float64{0.1, 1.1, 2.1}, "paramObj.paramFloatArray.0": 0.1, "paramObj.paramFloatArray.1": 1.1, "paramObj.paramFloatArray.2": 2.1,
 				"paramObj.paramStringArray": []string{"foo", "bar", "baz"}, "paramObj.paramStringArray.0": "foo", "paramObj.paramStringArray.1": "bar", "paramObj.paramStringArray.2": "baz",
 				"paramObj.paramBoolArray": []bool{true, false, true}, "paramObj.paramBoolArray.0": true, "paramObj.paramBoolArray.1": false, "paramObj.paramBoolArray.2": true,
+				"paramObj.paramDurationArray": []string{"10h10m", "10h20m", "10h30m"}, "paramObj.paramDurationArray.0": "10h10m", "paramObj.paramDurationArray.1": "10h20m", "paramObj.paramDurationArray.2": "10h30m",
 			},
 			wantErr: false,
 		}, {
@@ -201,6 +204,32 @@ func TestConfig_GetInt(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if gotI := tt.c.GetInt(tt.args.p); gotI != tt.wantI {
 				t.Errorf("Config.GetInt() = %v, want %v", gotI, tt.wantI)
+			}
+		})
+	}
+}
+
+func TestConfig_GetDuration(t *testing.T) {
+	type args struct {
+		p string
+	}
+	tests := []struct {
+		name  string
+		c     *Config
+		args  args
+		wantD time.Duration
+	}{
+		{
+			name:  "Get Duration",
+			args:  args{p: "paramDuration"},
+			c:     &Config{"paramDuration": "42µs1000ns"},
+			wantD: 43 * time.Microsecond,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotD := tt.c.GetDuration(tt.args.p); gotD != tt.wantD {
+				t.Errorf("Config.GetDuration() = %v, want %v", gotD, tt.wantD)
 			}
 		})
 	}
@@ -441,6 +470,37 @@ func TestConfig_GetIntArray(t *testing.T) {
 	}
 }
 
+func TestConfig_GetDurationArray(t *testing.T) {
+	type args struct {
+		p string
+	}
+	tests := []struct {
+		name string
+		c    *Config
+		args args
+		want []time.Duration
+	}{
+		{
+			name: "Get Duration Array",
+			args: args{p: "paramDurationArray"},
+			c:    &Config{"paramDurationArray": []string{"42ns", "5m", "10h10m"}},
+			want: []time.Duration{42 * time.Nanosecond, 5 * time.Minute, 10*time.Hour + 10*time.Minute},
+		}, {
+			name: "Get Duration Array From Duration",
+			args: args{p: "paramDuration"},
+			c:    &Config{"paramDuration": "42ns"},
+			want: []time.Duration{42 * time.Nanosecond},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.c.GetDurationArray(tt.args.p); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Config.GetDurationArray() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestConfig_GetBoolArray(t *testing.T) {
 	type args struct {
 		p string
@@ -493,7 +553,8 @@ func generateTestFiles(t *testing.T) {
 	"paramString": "foo",
 	"paramInt": 42,
 	"paramFloat": 42.1,
-	"paramBool": true
+	"paramBool": true,
+	"paramDuration": "10h10m"
 }`)
 	err := ioutil.WriteFile("simple-conf.json", simpleConfJSON, 0644)
 	if err != nil {
@@ -501,10 +562,12 @@ func generateTestFiles(t *testing.T) {
 	}
 
 	// simple-conf.yaml
-	simpleConfYAML := []byte(`paramString: foo
+	simpleConfYAML := []byte(`
+paramString: foo
 paramInt: 42
 paramFloat: 42.1
-paramBool: true`)
+paramBool: true
+paramDuration: 10h10m`)
 	err = ioutil.WriteFile("simple-conf.yaml", simpleConfYAML, 0644)
 	if err != nil {
 		t.Error("Could not generate test file simple-conf.yaml")
@@ -515,12 +578,14 @@ paramBool: true`)
     "paramString": "foo",
     "paramInt": 42,
     "paramFloat": 42.1,
-    "paramBool": true,
+	"paramBool": true,
+	"paramDuration": "10h10m",
     "paramObj": {
         "paramIntArray": [0, 1, 2],
         "paramFloatArray": [0.1, 1.1, 2.1],
         "paramStringArray": ["foo", "bar", "baz"],
-        "paramBoolArray": [true, false, true]
+		"paramBoolArray": [true, false, true],
+		"paramDurationArray": ["10h10m", "10h20m", "10h30m"]
     }
 }`)
 	err = ioutil.WriteFile("complex-conf.json", complexConfJSON, 0644)
@@ -529,18 +594,21 @@ paramBool: true`)
 	}
 
 	// complex-conf.yaml
-	complexConfYAML := []byte(`{
-    "paramString": "foo",
-    "paramInt": 42,
-    "paramFloat": 42.1,
-    "paramBool": true,
-    "paramObj": {
-        "paramIntArray": [0, 1, 2],
-        "paramFloatArray": [0.1, 1.1, 2.1],
-        "paramStringArray": ["foo", "bar", "baz"],
-        "paramBoolArray": [true, false, true]
-    }
-}`)
+	complexConfYAML := []byte(`
+paramString: foo
+paramInt: 42
+paramFloat: 42.1
+paramBool: true
+paramDuration: 10h10m
+paramObj:
+  paramIntArray:
+    - 0
+    - 1
+    - 2
+  paramFloatArray: [0.1, 1.1, 2.1]
+  paramStringArray: ["foo", "bar", "baz"]
+  paramBoolArray: [true, false, true]
+  paramDurationArray: [10h10m, 10h20m, 10h30m]`)
 	err = ioutil.WriteFile("complex-conf.yaml", complexConfYAML, 0644)
 	if err != nil {
 		t.Error("Could not generate test file complex-conf.yaml")
@@ -559,7 +627,8 @@ paramBool: true`)
 	}
 
 	// invalid-conf.yaml
-	invalidConfYAML := []byte(`paramString: foo
+	invalidConfYAML := []byte(`
+paramString: foo
   paramInt: 42
 paramFloat: 42.1
 paramBool: true`)
@@ -594,7 +663,8 @@ paramBool: true`)
 	}
 
 	// conf-withenv.yaml
-	confWithEnvYAML := []byte(`paramString: ${ENV_STRING}
+	confWithEnvYAML := []byte(`
+paramString: ${ENV_STRING}
 paramInt: ${ENV_INT}
 paramFloat: ${ENV_FLOAT}
 paramBool: ${ENV_BOOL}

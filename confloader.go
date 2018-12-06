@@ -12,6 +12,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Config is a map of parameters in a configuration file.
@@ -99,9 +100,16 @@ func (c *Config) GetFloat(p string) (f float64) {
 	return f
 }
 
-// GetInt gets int value of parameter p. Cast GetFloat() return value to int.
+// GetInt gets int value of parameter p.
 func (c *Config) GetInt(p string) int {
 	return int(c.GetFloat(p))
+}
+
+// GetDuration gets duration value of parameter p. p can have
+// suffixes like s, ms, h, etc. In fact the same as standard time.ParseDuration().
+func (c *Config) GetDuration(p string) (d time.Duration) {
+	d, _ = time.ParseDuration(c.GetString(p))
+	return d
 }
 
 // GetBool gets number value of parameter p. Uses Get().
@@ -187,6 +195,16 @@ func (c *Config) GetIntArray(p string) []int {
 	a := make([]int, len(arr))
 	for i, k := range arr {
 		a[i] = int(k)
+	}
+	return a
+}
+
+// GetDurationArray gets a duration slice from parameter p.
+func (c *Config) GetDurationArray(p string) []time.Duration {
+	arr := c.GetStringArray(p)
+	a := make([]time.Duration, len(arr))
+	for i, k := range arr {
+		a[i], _ = time.ParseDuration(k)
 	}
 	return a
 }
