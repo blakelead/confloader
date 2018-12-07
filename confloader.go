@@ -1,23 +1,48 @@
-// Copyright 2018 Adel Abdelhak.
+// Copyright 2019 Adel Abdelhak.
 // Use of this source code is governed by the MIT
 // license that can be found in the LICENSE file.
 
 // Package confloader is a simple configuration file loader that
-// I use for my personal Go projects.
-// It accepts JSON and YAML formats.
+// accepts both JSON and YAML file formats.
+//
+// Configuration file (JSON):
+//  {
+//    "paramString": "foo"
+//  }
+// Code:
+//     package main
+//     import (
+//         "fmt"
+//         cl "github.com/blakelead/confloader"
+//     )
+//     func main() {
+//         cnf, err := confloader.Load("conf.json")
+//         if err != nil {
+//             panic(err)
+//         }
+//         ps := cnf.GetString("paramString")
+//         fmt.Println(ps) // foo
+//     }
+// Parameters can be of type string, int, float, bool, duration and array.
+// See the Github Readme for a more thorough example.
 package confloader
 
 import (
+	"encoding/json"
+	"errors"
 	"io/ioutil"
+	"os"
 	"path"
 	"strconv"
 	"strings"
 	"time"
+
+	yaml "gopkg.in/yaml.v2"
 )
 
-// Config is a map of parameters in a configuration file.
-// The key is the absolute path of the parameter.
-// The value is the raw value of the parameter.
+// Config is a map of parameters. Each key corresponds to the absolute path
+// of the parameter in the configuration file. Values are the raw value of
+// the parameter.
 type Config map[string]interface{}
 
 // Load loads a configuration file and returns a Config object, or an error
@@ -32,14 +57,7 @@ func Load(filename string) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-
-	cnf := flatten(raw)
-
-	// for k, v := range cnf {
-	// 	fmt.Println(k, v, reflect.TypeOf(v))
-	// }
-
-	return cnf, nil
+	return flatten(raw), nil
 }
 
 // Get gets value of parameter p. p should be the absolute path to the parameter.
@@ -49,7 +67,7 @@ func (c *Config) Get(p string) interface{} {
 	return (*c)[p]
 }
 
-// GetString gets string value of parameter p. Uses Get().
+// GetString gets string value of parameter p.
 // If parameter is a number, the number is converted to a string.
 // If parameter is a boolean, the string will be "true" or "false".
 func (c *Config) GetString(p string) (s string) {
@@ -78,7 +96,7 @@ func (c *Config) GetString(p string) (s string) {
 	return s
 }
 
-// GetFloat gets float value of parameter p. Uses Get().
+// GetFloat gets float value of parameter p.
 // If parameter is a boolean, the number will be 1.0 if true, 0.0 if false.
 func (c *Config) GetFloat(p string) (f float64) {
 	switch v := c.Get(p).(type) {
@@ -112,7 +130,7 @@ func (c *Config) GetDuration(p string) (d time.Duration) {
 	return d
 }
 
-// GetBool gets number value of parameter p. Uses Get().
+// GetBool gets number value of parameter p.
 // If parameter is a number, the boolean will be true if parameter is not 0,
 // false otherwise.
 func (c *Config) GetBool(p string) (b bool) {
@@ -234,4 +252,104 @@ func (c *Config) GetBoolArray(p string) (a []bool) {
 		}
 	}
 	return a
+}
+
+/*
+ * internal code
+ */
+
+// flatten takes an interface and extract all of its values and put them in a map.
+func flatten(obj interface{}, prefix ...string) Config {
+	fields := make(Config)
+
+	var pre string
+	if len(prefix) > 0 {
+		pre = pre + prefix[0]
+	}
+
+	switch obj.(type) {
+	case map[interface{}]interface{}:
+		for key, value := range obj.(map[interface{}]interface{}) {
+			res := flatten(value, pre+key.(string)+".")
+			for k, v := range res {
+				fields[strings.TrimRight(k, ".")] = v
+			}
+		}
+	case map[string]interface{}:
+		for key, value := range obj.(map[string]interface{}) {
+			res := flatten(value, pre+key+".")
+			for k, v := range res {
+				fields[strings.TrimRight(k, ".")] = v
+			}
+		}
+	case []interface{}:
+		if len(obj.([]interface{})) == 0 {
+			break
+		}
+		switch obj.([]interface{})[0].(type) {
+		case string:
+			arr := make([]string, len(obj.([]interface{})))
+			for i, k := range obj.([]interface{}) {
+				arr[i] = getEnvValue(k.(string))
+			}
+			fields[pre] = arr
+		case int:
+			arr := make([]float64, len(obj.([]interface{})))
+			for i, k := range obj.([]interface{}) {
+				arr[i] = float64(k.(int))
+			}
+			fields[pre] = arr
+		case float64:
+			arr := make([]float64, len(obj.([]interface{})))
+			for i, k := range obj.([]interface{}) {
+				arr[i] = k.(float64)
+			}
+			fields[pre] = arr
+		case bool:
+			arr := make([]bool, len(obj.([]interface{})))
+			for i, k := range obj.([]interface{}) {
+				arr[i] = k.(bool)
+			}
+			fields[pre] = arr
+		}
+		for index, value := range obj.([]interface{}) {
+			res := flatten(value, pre+strconv.Itoa(index)+".")
+			for k, v := range res {
+				fields[strings.TrimRight(k, ".")] = v
+			}
+		}
+	case int:
+		fields[strings.TrimRight(pre, ".")] = float64(obj.(int))
+	case float64:
+		fields[strings.TrimRight(pre, ".")] = obj.(float64)
+	case string:
+		v := getEnvValue(obj.(string))
+		fields[strings.TrimRight(pre, ".")] = v
+	case bool:
+		fields[strings.TrimRight(pre, ".")] = obj.(bool)
+	}
+
+	return fields
+}
+
+// unmarshal calls either json.Unmarshal or yaml.Unmarshal
+// depending on configuration file name extension.
+func unmarshal(format string, data []byte, v interface{}) error {
+	if format == ".json" {
+		return json.Unmarshal(data, v)
+	} else if format == ".yml" || format == ".yaml" {
+		return yaml.Unmarshal(data, v)
+	}
+	return errors.New("Unrecognized file format  " + format)
+}
+
+// getEnvValue cleans env var value if v is in the form ${xxx} or $xxx.
+func getEnvValue(v string) string {
+	if strings.HasPrefix(v, "$") {
+		v = strings.Replace(v, "$", "", -1)
+		v = strings.Replace(v, "{", "", -1)
+		v = strings.Replace(v, "}", "", -1)
+		v = os.Getenv(v)
+	}
+	return v
 }
