@@ -33,6 +33,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -48,7 +49,7 @@ type Config map[string]interface{}
 // Load loads a configuration file and returns a Config object, or an error
 // if file could not be read or unmarshalled, or if the file doesn't exist.
 func Load(filename string) (Config, error) {
-	blob, err := ioutil.ReadFile(filename)
+	blob, err := readFile(filename)
 	if err != nil {
 		return Config{}, err
 	}
@@ -352,4 +353,23 @@ func getEnvValue(v string) string {
 		v = os.Getenv(v)
 	}
 	return v
+}
+
+// readfile checks  if the provided filename is a  valid path to
+// the file. If it is not, it checks if the filename corresponds
+// to a file relative to the executable directory. It then reads
+// the file and returns its content.
+func readFile(filename string) ([]byte, error) {
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+		absPath, err := os.Executable()
+		if err != nil {
+			return []byte{}, err
+		}
+		absPathDir := filepath.Dir(absPath)
+		filename = absPathDir + string(os.PathSeparator) + filename
+		if _, err := os.Stat(filename); os.IsNotExist(err) {
+			return []byte{}, err
+		}
+	}
+	return ioutil.ReadFile(filename)
 }
