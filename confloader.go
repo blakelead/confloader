@@ -1,4 +1,4 @@
-// Copyright 2018 Adel Abdelhak.
+// Copyright 2019 Adel Abdelhak.
 // Use of this source code is governed by the MIT
 // license that can be found in the LICENSE file.
 
@@ -283,6 +283,9 @@ func flatten(obj interface{}, prefix ...string) Config {
 			}
 		}
 	case []interface{}:
+		if len(obj.([]interface{})) == 0 {
+			break
+		}
 		switch obj.([]interface{})[0].(type) {
 		case string:
 			arr := make([]string, len(obj.([]interface{})))

@@ -1,4 +1,4 @@
-// Copyright 2018 Adel Abdelhak.
+// Copyright 2019 Adel Abdelhak.
 // Use of this source code is governed by the MIT
 // license that can be found in the LICENSE file.
 
@@ -101,6 +101,34 @@ func TestLoad(t *testing.T) {
 				"paramString": "foo", "paramInt": "42", "paramFloat": "42.3", "paramBool": "true",
 				"paramStringArray": []string{"fooz", "bar", "baz"}, "paramStringArray.0": "fooz", "paramStringArray.1": "bar", "paramStringArray.2": "baz",
 			},
+			wantErr: false,
+		}, {
+			name: "Load JSON File With Duplicate",
+			args: args{filename: "conf-withdup.json"},
+			want: Config{
+				"paramString": "baz", "paramInt": 42.0, "paramFloat": 42.1, "paramBool": true, "paramDuration": "10h10m",
+				"paramArray": []float64{4.0, 5.0, 6.0}, "paramArray.0": 4.0, "paramArray.1": 5.0, "paramArray.2": 6.0,
+				"paramObject.param2": "bar",
+			},
+			wantErr: false,
+		}, {
+			name:    "Load JSON File With Null Values",
+			args:    args{filename: "conf-withnull.json"},
+			want:    Config{},
+			wantErr: false,
+		}, {
+			name: "Load YAML File With Duplicate",
+			args: args{filename: "conf-withdup.yaml"},
+			want: Config{
+				"paramString": "baz", "paramInt": 42.0, "paramFloat": 42.1, "paramBool": true, "paramDuration": "10h10m",
+				"paramArray": []float64{4, 5, 6}, "paramArray.0": 4.0, "paramArray.1": 5.0, "paramArray.2": 6.0,
+				"paramObject.param2": "bar",
+			},
+			wantErr: false,
+		}, {
+			name:    "Load YAML File With Null Values",
+			args:    args{filename: "conf-withnull.yaml"},
+			want:    Config{},
 			wantErr: false,
 		},
 	}
@@ -673,6 +701,79 @@ paramStringArray: ["${ENV_ARR_0}", "bar", "baz"]`)
 	if err != nil {
 		t.Error("Could not generate test file conf-withenv.yaml")
 	}
+
+	// conf-withdup.json
+	confWithDupJSON := []byte(`{
+		"paramString": "foo",
+		"paramString": "baz",
+		"paramInt": 42,
+		"paramFloat": 42.1,
+		"paramBool": true,
+		"paramDuration": "10h10m",
+		"paramArray": [1, 2, 3],
+		"paramArray": [4, 5, 6],
+		"paramObject": {
+			"param1": "foo"
+		},
+		"paramObject": {
+			"param2": "bar"
+		}
+	}`)
+	err = ioutil.WriteFile("conf-withdup.json", confWithDupJSON, 0644)
+	if err != nil {
+		t.Error("Could not generate test file conf-withdup.json")
+	}
+
+	// conf-withnull.json
+	confWithNullJSON := []byte(`{
+		"paramString": null,
+		"paramInt": null,
+		"paramFloat": null,
+		"paramBool": null,
+		"paramDuration": null,
+		"paramArray": [null, null, null],
+		"paramObject": {}
+	}`)
+	err = ioutil.WriteFile("conf-withnull.json", confWithNullJSON, 0644)
+	if err != nil {
+		t.Error("Could not generate test file conf-withnull.json")
+	}
+
+	// conf-withdup.yaml
+	confWithDupYAML := []byte(`
+paramString: foo
+paramString: baz
+paramInt: 42
+paramFloat: 42.1
+paramBool: true
+paramDuration: 10h10m
+paramArray: [1, 2, 3]
+paramArray: [4, 5, 6]
+paramObject:
+  param1: foo
+paramObject:
+  param2: bar
+`)
+	err = ioutil.WriteFile("conf-withdup.yaml", confWithDupYAML, 0644)
+	if err != nil {
+		t.Error("Could not generate test file conf-withdup.yaml")
+	}
+
+	// conf-withnull.yaml
+	confWithNullYAML := []byte(`
+paramString: null
+paramInt: null
+paramFloat: null
+paramBool: null
+paramDuration: null
+paramEmpty:
+paramArray: []
+paramObject: {}
+`)
+	err = ioutil.WriteFile("conf-withnull.yaml", confWithNullYAML, 0644)
+	if err != nil {
+		t.Error("Could not generate test file conf-withnull.yaml")
+	}
 }
 
 func deleteTestFiles(t *testing.T) {
@@ -685,6 +786,10 @@ func deleteTestFiles(t *testing.T) {
 		"invalid-conf.yaml",
 		"conf-withenv.json",
 		"conf-withenv.yaml",
+		"conf-withdup.json",
+		"conf-withdup.yaml",
+		"conf-withnull.json",
+		"conf-withnull.yaml",
 		"conf.unhandled",
 	}
 
