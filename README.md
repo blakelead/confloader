@@ -6,7 +6,7 @@
 
 ## Presentation
 
-**Confloader** is a simple configuration file loader that I use for my personal Go projects. It accepts JSON and YAML formats.
+**Confloader** is a minimal configuration file loader without any fancy features. It accepts JSON and YAML formats.
 
 ## How to use it
 
