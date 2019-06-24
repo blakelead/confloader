@@ -1,6 +1,6 @@
 # Configuration Loader
 
-[![Build Status](https://travis-ci.org/blakelead/confloader.svg?branch=master)](https://travis-ci.org/blakelead/confloader)
+[![Build Status](https://travis-ci.org/leansys-team/confloader.svg?branch=master)](https://travis-ci.org/leansys-team/confloader.svg?branch=master)
 [![Coverage Status](https://coveralls.io/repos/github/blakelead/confloader/badge.svg?branch=master)](https://coveralls.io/github/blakelead/confloader?branch=master)
 [![Software License](https://img.shields.io/badge/license-MIT-green.svg)](/LICENSE.txt)
 
