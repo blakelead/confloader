@@ -32,6 +32,16 @@ func TestLoad(t *testing.T) {
 		wantErr bool
 	}{
 		{
+			name:    "Load Empty JSON File",
+			args:    args{filename: "empty.json"},
+			want:    Config{},
+			wantErr: true,
+		}, {
+			name:    "Load Empty YAML File",
+			args:    args{filename: "empty.yaml"},
+			want:    Config{},
+			wantErr: true,
+		}, {
 			name:    "Load Non-Existent File",
 			args:    args{filename: "non-existent-conf.json"},
 			want:    Config{},
@@ -576,6 +586,20 @@ func TestConfig_GetBoolArray(t *testing.T) {
 }
 
 func generateTestFiles(t *testing.T) {
+	// empty.json
+	emptyJSON := []byte(``)
+	err := ioutil.WriteFile("empty.json", emptyJSON, 0644)
+	if err != nil {
+		t.Error("Could not generate test file empty.json")
+	}
+
+	// empty.yaml
+	emptyYAML := []byte(``)
+	err = ioutil.WriteFile("empty.yaml", emptyYAML, 0644)
+	if err != nil {
+		t.Error("Could not generate test file empty.yaml")
+	}
+
 	// simple-conf.json
 	simpleConfJSON := []byte(`{
 	"paramString": "foo",
@@ -584,7 +608,7 @@ func generateTestFiles(t *testing.T) {
 	"paramBool": true,
 	"paramDuration": "10h10m"
 }`)
-	err := ioutil.WriteFile("simple-conf.json", simpleConfJSON, 0644)
+	err = ioutil.WriteFile("simple-conf.json", simpleConfJSON, 0644)
 	if err != nil {
 		t.Error("Could not generate test file simple-conf.json")
 	}
@@ -791,6 +815,8 @@ func deleteTestFiles(t *testing.T) {
 		"conf-withnull.json",
 		"conf-withnull.yaml",
 		"conf.unhandled",
+		"empty.json",
+		"empty.yaml",
 	}
 
 	for _, file := range files {

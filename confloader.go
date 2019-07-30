@@ -365,11 +365,13 @@ func readFile(filename string) ([]byte, error) {
 		if err != nil {
 			return []byte{}, err
 		}
-		absPathDir := filepath.Dir(absPath)
-		filename = absPathDir + string(os.PathSeparator) + filename
+		filename = filepath.Dir(absPath) + string(os.PathSeparator) + filename
 		if _, err := os.Stat(filename); os.IsNotExist(err) {
 			return []byte{}, err
 		}
+	}
+	if fi, _ := os.Stat(filename); fi.Size() == 0 {
+		return []byte{}, errors.New("Configuration file is empty")
 	}
 	return ioutil.ReadFile(filename)
 }
