@@ -4,6 +4,8 @@
 [![Coverage Status](https://coveralls.io/repos/github/blakelead/confloader/badge.svg?branch=master)](https://coveralls.io/github/blakelead/confloader?branch=master)
 [![Software License](https://img.shields.io/badge/license-MIT-green.svg)](/LICENSE.txt)
 
+**ARCHIVED: Please use https://github.com/blakelead/lodr**
+
 ## Presentation
 
 **Confloader** is a minimal configuration file loader without any fancy features. It accepts JSON and YAML formats.
